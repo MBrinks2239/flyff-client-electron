@@ -1,4 +1,6 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
+const path = require("path");
+const ws = require("windows-shortcuts"); // npm install windows-shortcuts
 
 let profileName = app.commandLine.getSwitchValue("profile");
 let shouldNotMaximize = app.commandLine.getSwitchValue("no-maximize");
@@ -14,7 +16,7 @@ if (profileName === "") {
   profileName = process.argv[2];
 }
 
-if (profileName === "" || profileName == undefined) {
+if (!profileName) {
   profileName = "default";
 }
 
@@ -46,17 +48,68 @@ const createWindow = () => {
     win.setTitle(`Flyff Universe - ${profileName}`);
     win.setSize(appWidth, appHeight);
     win.show();
-
     win.webContents.setZoomFactor(1);
   });
 
-  win.webContents.on('before-input-event', (event, input) => {
-    if ((input.control || input.meta) && (input.key === '+' || input.key === '-')) {
+  win.webContents.on("before-input-event", (event, input) => {
+    if ((input.control || input.meta) && (input.key === "+" || input.key === "-")) {
       event.preventDefault();
     }
   });
 };
 
+const createCreationWindow = () => {
+  const win = new BrowserWindow({
+    width: 800,
+    height: 600,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+  win.loadFile("screens/index.html");
+};
+
+ipcMain.on("create-shortcut", (event, settings) => {
+  const appPath = process.execPath;
+  const desktop = app.getPath("desktop");
+  const shortcutPath = path.join(desktop, `${settings.profile}.lnk`);
+
+  const iconPath = path.join(__dirname, "assets", "icons", settings.icon);
+
+  const args = [
+    `--profile=${settings.profile}`,
+    `--width=${settings.width}`,
+    `--height=${settings.height}`,
+  ];
+  if (settings.noMaximize) args.push("--no-maximize");
+
+  ws.create(
+    shortcutPath,
+    {
+      target: appPath,
+      args: args.join(" "),
+      icon: iconPath,
+      desc: `Flyff Universe - ${settings.profile}`,
+    },
+    (err) => {
+      if (err) {
+        console.error("Failed to create shortcut:", err);
+        event.reply("shortcut-created", { success: false, error: err.message });
+      } else {
+        console.log("Shortcut created:", shortcutPath);
+        event.reply("shortcut-created", { success: true });
+      }
+    }
+  );
+});
+
 app.whenReady().then(() => {
-  createWindow();
+  if (profileName !== "default") {
+    createWindow();
+  } else {
+    createCreationWindow();
+  }
 });

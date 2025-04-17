@@ -20,5 +20,8 @@
   },
   "build": {
     "asar": true
+  },
+  "dependencies": {
+    "windows-shortcuts": "^0.1.6"
   }
 }

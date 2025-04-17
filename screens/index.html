@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Flyff Shortcut</title>
+</head>
+<body>
+  <h1>Create Flyff Profile Shortcut</h1>
+  <form id="shortcut-form">
+    <label>
+      Profile Name:
+      <input type="text" id="profile" required />
+    </label><br><br>
+
+    <label>
+      Width:
+      <input type="number" id="width" value="1920" />
+    </label><br><br>
+
+    <label>
+      Height:
+      <input type="number" id="height" value="1080" />
+    </label><br><br>
+
+    <label>
+      Maximize Window:
+      <input type="checkbox" id="maximize" checked />
+    </label><br><br>
+
+    <label>
+      Icon:
+      <select id="icon-select"></select>
+    </label><br><br>
+
+    <button type="submit">Create Shortcut</button>
+  </form>
+
+  <script>
+    const { ipcRenderer } = require("electron");
+    const fs = require("fs");
+    const path = require("path");
+
+    const iconSelect = document.getElementById("icon-select");
+    const assetsPath = path.join(__dirname, "..", "assets", "icons");
+
+    fs.readdirSync(assetsPath).forEach((file) => {
+      const option = document.createElement("option");
+      option.value = file;
+      option.textContent = file;
+      iconSelect.appendChild(option);
+    });
+
+    document.getElementById("shortcut-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const profile = document.getElementById("profile").value.trim();
+      if (!profile) return alert("Please enter a profile name.");
+
+      ipcRenderer.send("create-shortcut", {
+        profile,
+        width: parseInt(document.getElementById("width").value),
+        height: parseInt(document.getElementById("height").value),
+        noMaximize: !document.getElementById("maximize").checked,
+        icon: document.getElementById("icon-select").value,
+      });
+    });
+
+    ipcRenderer.on("shortcut-created", (event, result) => {
+      if (result.success) {
+        alert("Shortcut created successfully on your desktop!");
+      } else {
+        alert("Error creating shortcut: " + result.error);
+      }
+    });
+  </script>
+</body>
+</html>
