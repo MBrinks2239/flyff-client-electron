@@ -1,204 +1,275 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Create Flyff Shortcut</title>
-    <style>
-      img#icon-preview {
-        max-width: 64px;
-        max-height: 64px;
-        border: 1px solid #ccc;
-        display: block;
-        margin-top: 10px;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Create Flyff Profile Shortcut</h1>
-    <form id="shortcut-form">
-      <label>
-        Profile Name:
-        <input type="text" id="profile" value="Some-name" required /> </label
-      ><br /><br />
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Flyff Shortcut</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #1e1f22;
+      color: #e2e2e2;
+      padding: 40px;
+      margin: 0;
+    }
 
-      <label>
-        Width:
-        <input type="number" id="width" value="1920" /> </label
-      ><br /><br />
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #ffffff;
+    }
 
-      <label>
-        Height:
-        <input type="number" id="height" value="1080" /> </label
-      ><br /><br />
+    form {
+      background: #2b2d31;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      padding: 30px 40px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
 
-      <label>
-        Maximize Window:
-        <input type="checkbox" id="maximize" checked /> </label
-      ><br /><br />
+    label {
+      display: block;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
 
-      <label>
-        Icon Folder:
-        <select id="folder-select"></select> </label
-      ><br /><br />
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      background: #1a1b1f;
+      color: #e2e2e2;
+    }
 
-      <label>
-        Icon File:
-        <select id="icon-select"></select> </label
-      ><br /><br />
+    input[type="checkbox"] {
+      margin-left: 8px;
+    }
 
+    button {
+      margin-top: 20px;
+      background-color: #3b82f6;
+      color: white;
+      padding: 12px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+
+    hr {
+      margin: 40px auto;
+      max-width: 500px;
+      border: none;
+      border-top: 1px solid #444;
+    }
+
+    #icon-preview {
+      max-width: 64px;
+      max-height: 64px;
+      border: 1px solid #666;
+      margin-top: 10px;
+      display: block;
+    }
+
+    #upload-button {
+      display: block;
+      margin: 0 auto;
+      background-color: #22c55e;
+    }
+
+    #upload-button:hover {
+      background-color: #16a34a;
+    }
+
+    #icon-preview-container {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Create Flyff Profile Shortcut</h1>
+  <form id="shortcut-form">
+    <label>
+      Profile Name:
+      <input type="text" id="profile" required />
+    </label>
+
+    <label>
+      Width:
+      <input type="number" id="width" value="1920" />
+    </label>
+
+    <label>
+      Height:
+      <input type="number" id="height" value="1080" />
+    </label>
+
+    <label>
+      Maximize Window:
+      <input type="checkbox" id="maximize" checked />
+    </label>
+
+    <label>
+      Icon Folder:
+      <select id="folder-select"></select>
+    </label>
+
+    <label>
+      Icon File:
+      <select id="icon-select"></select>
+    </label>
+
+    <div id="icon-preview-container">
       <img id="icon-preview" src="" alt="Icon preview" />
+    </div>
 
-      <br /><br />
-      <button type="submit">Create Shortcut</button>
-    </form>
+    <button type="submit">Create Shortcut</button>
+  </form>
 
-    <hr />
+  <hr>
 
-    <button id="upload-button">Upload Custom Icons</button>
-    <input
-      type="file"
-      id="icon-upload"
-      accept=".ico"
-      multiple
-      style="display: none"
-    />
+  <button id="upload-button">Upload Custom Icons</button>
+  <input type="file" id="icon-upload" accept=".ico" multiple style="display: none;" />
 
-    <script>
-      const { ipcRenderer } = require("electron");
-      const fs = require("fs");
-      const path = require("path");
+  <script>
+    const { ipcRenderer } = require("electron");
+    const fs = require("fs");
+    const path = require("path");
 
-      const assetsPath = path.join(__dirname, "..", "assets", "icons");
-      const customPath = path.join(assetsPath, "custom");
+    const assetsPath = path.join(__dirname, "..", "assets", "icons");
+    const customPath = path.join(assetsPath, "custom");
 
-      const folderSelect = document.getElementById("folder-select");
-      const iconSelect = document.getElementById("icon-select");
-      const iconPreview = document.getElementById("icon-preview");
-      const uploadInput = document.getElementById("icon-upload");
-      const uploadButton = document.getElementById("upload-button");
+    const folderSelect = document.getElementById("folder-select");
+    const iconSelect = document.getElementById("icon-select");
+    const iconPreview = document.getElementById("icon-preview");
+    const uploadInput = document.getElementById("icon-upload");
+    const uploadButton = document.getElementById("upload-button");
 
-      if (!fs.existsSync(customPath)) {
-        fs.mkdirSync(customPath, { recursive: true });
+    if (!fs.existsSync(customPath)) {
+      fs.mkdirSync(customPath, { recursive: true });
+    }
+
+    const loadFolders = () => {
+      folderSelect.innerHTML = "";
+
+      let folders = fs.readdirSync(assetsPath).filter(folder => {
+        const folderPath = path.join(assetsPath, folder);
+        if (!fs.statSync(folderPath).isDirectory()) return false;
+        const files = fs.readdirSync(folderPath);
+        return files.some(f => /\.(ico|png)$/i.test(f));
+      });
+
+      // Ensure custom is at the end if it has icons
+      folders = folders.filter(f => f !== "custom");
+      if (fs.existsSync(customPath)) {
+        const customFiles = fs.readdirSync(customPath);
+        if (customFiles.some(f => /\.(ico|png)$/i.test(f))) {
+          folders.push("custom");
+        }
       }
 
-      const loadFolders = () => {
-        folderSelect.innerHTML = "";
+      folders.forEach(folder => {
+        const option = document.createElement("option");
+        option.value = folder;
+        option.textContent = folder;
+        folderSelect.appendChild(option);
+      });
+    };
 
-        let folders = fs.readdirSync(assetsPath).filter((folder) => {
-          const folderPath = path.join(assetsPath, folder);
-          if (!fs.statSync(folderPath).isDirectory()) return false;
+    const loadIconsFromFolder = (folderName) => {
+      const folderPath = path.join(assetsPath, folderName);
+      const icons = fs.readdirSync(folderPath).filter(file => /\.(ico|png)$/i.test(file));
 
-          // Check for at least one .ico or .png file inside
-          const files = fs.readdirSync(folderPath);
-          return files.some((f) => /\.(ico|png)$/i.test(f));
-        });
+      iconSelect.innerHTML = "";
+      icons.forEach(icon => {
+        const option = document.createElement("option");
+        option.value = icon;
+        option.textContent = icon;
+        iconSelect.appendChild(option);
+      });
 
-        // Move "custom" to the end if it exists
-        folders = folders.filter((f) => f !== "custom");
-        if (fs.existsSync(path.join(assetsPath, "custom"))) {
-          const customFiles = fs.readdirSync(path.join(assetsPath, "custom"));
-          if (customFiles.some((f) => /\.(ico|png)$/i.test(f))) {
-            folders.push("custom");
+      if (icons.length > 0) {
+        updatePreview(folderName, icons[0]);
+      } else {
+        iconPreview.src = "";
+      }
+    };
+
+    const updatePreview = (folderName, iconName) => {
+      const previewPath = path.join("..", "assets", "icons", folderName, iconName).replace(/\\/g, "/");
+      iconPreview.src = previewPath;
+    };
+
+    folderSelect.addEventListener("change", () => {
+      loadIconsFromFolder(folderSelect.value);
+    });
+
+    iconSelect.addEventListener("change", () => {
+      updatePreview(folderSelect.value, iconSelect.value);
+    });
+
+    document.getElementById("shortcut-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const profile = document.getElementById("profile").value.trim();
+      if (!profile) return alert("Please enter a profile name.");
+
+      ipcRenderer.send("create-shortcut", {
+        profile,
+        width: parseInt(document.getElementById("width").value),
+        height: parseInt(document.getElementById("height").value),
+        noMaximize: !document.getElementById("maximize").checked,
+        icon: path.join(folderSelect.value, iconSelect.value),
+      });
+    });
+
+    ipcRenderer.on("shortcut-created", (event, result) => {
+      if (result.success) {
+        alert("Shortcut created successfully on your desktop!");
+      } else {
+        alert("Error creating shortcut: " + result.error);
+      }
+    });
+
+    uploadButton.addEventListener("click", () => {
+      uploadInput.click();
+    });
+
+    uploadInput.addEventListener("change", () => {
+      const files = Array.from(uploadInput.files);
+      if (files.length === 0) return;
+
+      files.forEach(file => {
+        const destPath = path.join(customPath, path.basename(file.path));
+        fs.copyFile(file.path, destPath, (err) => {
+          if (err) {
+            console.error("Failed to copy file:", err);
           }
-        }
-
-        folders.forEach((folder) => {
-          const option = document.createElement("option");
-          option.value = folder;
-          option.textContent = folder;
-          folderSelect.appendChild(option);
         });
-      };
-
-      const loadIconsFromFolder = (folderName) => {
-        const folderPath = path.join(assetsPath, folderName);
-        const icons = fs
-          .readdirSync(folderPath)
-          .filter((file) => /\.(ico|png)$/i.test(file));
-
-        iconSelect.innerHTML = "";
-        icons.forEach((icon) => {
-          const option = document.createElement("option");
-          option.value = icon;
-          option.textContent = icon;
-          iconSelect.appendChild(option);
-        });
-
-        if (icons.length > 0) {
-          updatePreview(folderName, icons[0]);
-        } else {
-          iconPreview.src = "";
-        }
-      };
-
-      const updatePreview = (folderName, iconName) => {
-        const previewPath = path
-          .join("..", "assets", "icons", folderName, iconName)
-          .replace(/\\/g, "/");
-        iconPreview.src = previewPath;
-      };
-
-      folderSelect.addEventListener("change", () => {
-        loadIconsFromFolder(folderSelect.value);
       });
 
-      iconSelect.addEventListener("change", () => {
-        updatePreview(folderSelect.value, iconSelect.value);
-      });
+      setTimeout(() => {
+        loadFolders();
+        folderSelect.value = "custom";
+        loadIconsFromFolder("custom");
+      }, 200);
+    });
 
-      document
-        .getElementById("shortcut-form")
-        .addEventListener("submit", (e) => {
-          e.preventDefault();
-          const profile = document.getElementById("profile").value.trim();
-          if (!profile) return alert("Please enter a profile name.");
-
-          ipcRenderer.send("create-shortcut", {
-            profile,
-            width: parseInt(document.getElementById("width").value),
-            height: parseInt(document.getElementById("height").value),
-            noMaximize: !document.getElementById("maximize").checked,
-            icon: path.join(folderSelect.value, iconSelect.value),
-          });
-        });
-
-      ipcRenderer.on("shortcut-created", (event, result) => {
-        if (result.success) {
-          alert("Shortcut created successfully on your desktop!");
-        } else {
-          alert("Error creating shortcut: " + result.error);
-        }
-      });
-
-      uploadButton.addEventListener("click", () => {
-        uploadInput.click();
-      });
-
-      uploadInput.addEventListener("change", () => {
-        const files = Array.from(uploadInput.files);
-        if (files.length === 0) return;
-
-        files.forEach((file) => {
-          const destPath = path.join(customPath, path.basename(file.path));
-          fs.copyFile(file.path, destPath, (err) => {
-            if (err) {
-              console.error("Failed to copy file:", err);
-            }
-          });
-        });
-
-        setTimeout(() => {
-          loadFolders();
-          folderSelect.value = "custom";
-          loadIconsFromFolder("custom");
-        }, 200);
-      });
-
-      // Initial setup
-      loadFolders();
-      if (folderSelect.value) {
-        loadIconsFromFolder(folderSelect.value);
-      }
-    </script>
-  </body>
+    // Initial setup
+    loadFolders();
+    if (folderSelect.value) {
+      loadIconsFromFolder(folderSelect.value);
+    }
+  </script>
+</body>
 </html>
