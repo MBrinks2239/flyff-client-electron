@@ -95,14 +95,31 @@
       #icon-preview-container {
         text-align: center;
       }
+
+      #error-box {
+        display: none;
+        color: #f87171;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+
+      #success-box {
+        display: none;
+        color: #4ade80;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
     </style>
   </head>
   <body>
     <h1>Create Flyff Profile Shortcut</h1>
     <form id="shortcut-form">
+      <div id="error-box"></div>
+      <div id="success-box"></div>
+
       <label>
         Profile Name:
-        <input type="text" id="profile" value="some-account" required />
+        <input type="text" id="profile" value="Some-name" required />
       </label>
 
       <label>
@@ -135,15 +152,6 @@
       </div>
 
       <button type="submit">Create Shortcut</button>
-      <div
-        id="error-box"
-        style="
-          display: none;
-          color: #f87171;
-          font-weight: 500;
-          margin-bottom: 10px;
-        "
-      ></div>
     </form>
 
     <hr />
@@ -171,6 +179,7 @@
       const uploadInput = document.getElementById("icon-upload");
       const uploadButton = document.getElementById("upload-button");
       const errorBox = document.getElementById("error-box");
+      const successBox = document.getElementById("success-box");
 
       if (!fs.existsSync(customPath)) {
         fs.mkdirSync(customPath, { recursive: true });
@@ -179,11 +188,20 @@
       const showError = (msg) => {
         errorBox.textContent = msg;
         errorBox.style.display = "block";
+        successBox.style.display = "none";
       };
 
-      const clearError = () => {
+      const showSuccess = (msg) => {
+        successBox.textContent = msg;
+        successBox.style.display = "block";
+        errorBox.style.display = "none";
+      };
+
+      const clearMessages = () => {
         errorBox.textContent = "";
         errorBox.style.display = "none";
+        successBox.textContent = "";
+        successBox.style.display = "none";
       };
 
       const loadFolders = () => {
@@ -252,7 +270,7 @@
         .getElementById("shortcut-form")
         .addEventListener("submit", (e) => {
           e.preventDefault();
-          clearError();
+          clearMessages();
 
           const profile = document.getElementById("profile").value.trim();
           const width = parseInt(document.getElementById("width").value);
@@ -291,7 +309,6 @@
             return;
           }
 
-          // Everything's valid — create the shortcut
           ipcRenderer.send("create-shortcut", {
             profile,
             width,
@@ -303,9 +320,7 @@
 
       ipcRenderer.on("shortcut-created", (event, result) => {
         if (result.success) {
-          clearError();
-          // Optionally show a success message
-          console.log("Shortcut created.");
+          showSuccess("Shortcut created successfully on your desktop!");
         } else {
           showError("Error creating shortcut: " + result.error);
         }
