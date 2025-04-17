@@ -32,6 +32,33 @@
         display: block;
         margin-bottom: 15px;
         font-weight: 600;
+        position: relative;
+      }
+
+      label[data-tooltip]:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        background: #111827;
+        color: #f3f4f6;
+        font-size: 12px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        white-space: pre-line;
+        top: 100%;
+        left: 0;
+        z-index: 100;
+        margin-top: -20px;
+        opacity: 0;
+        animation: fadeIn 0.3s forwards 1s;
+        pointer-events: none;
+        max-width: 260px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+        }
       }
 
       input[type="text"],
@@ -89,6 +116,10 @@
         display: block;
       }
 
+      #icon-preview-container {
+        text-align: center;
+      }
+
       #upload-button {
         display: block;
         margin: 0 auto;
@@ -104,10 +135,6 @@
 
       #upload-button:hover {
         background-color: #4b4d52;
-      }
-
-      #icon-preview-container {
-        text-align: center;
       }
 
       .toast {
@@ -144,33 +171,41 @@
   <body>
     <h1>Create Flyff Profile Shortcut</h1>
     <form id="shortcut-form">
-      <label>
-        Profile name (must be unique):
+      <label
+        data-tooltip="Used to identify the shortcut. Only letters, numbers, dashes, and underscores are allowed."
+      >
+        Profile name: ⓘ
         <input type="text" id="profile" value="Some-name" required />
       </label>
 
-      <label>
-        Width (when not maximized):
+      <label
+        data-tooltip="Minimum 100 pixels. Only used if window is not maximized."
+      >
+        Width: ⓘ
         <input type="number" id="width" value="1920" />
       </label>
 
-      <label>
-        Height (when not maximized):
+      <label
+        data-tooltip="Minimum 100 pixels. Only used if window is not maximized."
+      >
+        Height: ⓘ
         <input type="number" id="height" value="1080" />
       </label>
 
-      <label>
-        Maximize window on start:
+      <label
+        data-tooltip="If checked, the window will launch in fullscreen. Width and height will be ignored."
+      >
+        Maximize window on start: ⓘ
         <input type="checkbox" id="maximize" checked />
       </label>
 
-      <label>
-        Icon folder / color:
+      <label data-tooltip="Choose a folder of icons grouped by color or style.">
+        Icon folder: ⓘ
         <select id="folder-select"></select>
       </label>
 
-      <label>
-        Icon file / class:
+      <label data-tooltip="Select the .ico file to use for the shortcut icon.">
+        Icon file: ⓘ
         <select id="icon-select"></select>
       </label>
 
@@ -183,7 +218,7 @@
 
     <hr />
 
-    <button id="upload-button">Upload Custom Icons</button>
+    <button id="upload-button">📁 Upload Custom Icons</button>
     <input
       type="file"
       id="icon-upload"
@@ -192,7 +227,6 @@
       style="display: none"
     />
 
-    <!-- Toast message container -->
     <div id="toast" class="toast"></div>
 
     <script>
