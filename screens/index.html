@@ -3,6 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <title>Create Flyff Shortcut</title>
+  <style>
+    img#icon-preview {
+      max-width: 64px;
+      max-height: 64px;
+      border: 1px solid #ccc;
+      display: block;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
   <h1>Create Flyff Profile Shortcut</h1>
@@ -23,14 +32,21 @@
     </label><br><br>
 
     <label>
-      Maximize Window:
+      Maximize Window on startup:
       <input type="checkbox" id="maximize" checked />
     </label><br><br>
 
     <label>
-      Icon:
+      Icon Folder / Color:
+      <select id="folder-select"></select>
+    </label><br><br>
+
+    <label>
+      Icon File / Class:
       <select id="icon-select"></select>
     </label><br><br>
+
+    <img id="icon-preview" src="" alt="Icon preview" />
 
     <button type="submit">Create Shortcut</button>
   </form>
@@ -40,15 +56,60 @@
     const fs = require("fs");
     const path = require("path");
 
-    const iconSelect = document.getElementById("icon-select");
     const assetsPath = path.join(__dirname, "..", "assets", "icons");
+    const folderSelect = document.getElementById("folder-select");
+    const iconSelect = document.getElementById("icon-select");
+    const iconPreview = document.getElementById("icon-preview");
 
-    fs.readdirSync(assetsPath).forEach((file) => {
-      const option = document.createElement("option");
-      option.value = file;
-      option.textContent = file;
-      iconSelect.appendChild(option);
+    // Populate folders
+    const folders = fs.readdirSync(assetsPath).filter(file => {
+      return fs.statSync(path.join(assetsPath, file)).isDirectory();
     });
+
+    folders.forEach(folder => {
+      const option = document.createElement("option");
+      option.value = folder;
+      option.textContent = folder;
+      folderSelect.appendChild(option);
+    });
+
+    const loadIconsFromFolder = (folderName) => {
+      const folderPath = path.join(assetsPath, folderName);
+      const icons = fs.readdirSync(folderPath).filter(file => /\.(ico|png)$/i.test(file));
+      
+      iconSelect.innerHTML = "";
+      icons.forEach(icon => {
+        const option = document.createElement("option");
+        option.value = icon;
+        option.textContent = icon;
+        iconSelect.appendChild(option);
+      });
+
+      if (icons.length > 0) {
+        updatePreview(folderName, icons[0]);
+      } else {
+        iconPreview.src = "";
+      }
+    };
+
+    const updatePreview = (folderName, iconName) => {
+      const previewPath = path.join("..", "assets", "icons", folderName, iconName).replace(/\\/g, "/");
+      iconPreview.src = previewPath;
+    };
+
+    folderSelect.addEventListener("change", () => {
+      loadIconsFromFolder(folderSelect.value);
+    });
+
+    iconSelect.addEventListener("change", () => {
+      updatePreview(folderSelect.value, iconSelect.value);
+    });
+
+    // Initial load
+    if (folders.length > 0) {
+      folderSelect.value = folders[0];
+      loadIconsFromFolder(folders[0]);
+    }
 
     document.getElementById("shortcut-form").addEventListener("submit", (e) => {
       e.preventDefault();
@@ -60,7 +121,7 @@
         width: parseInt(document.getElementById("width").value),
         height: parseInt(document.getElementById("height").value),
         noMaximize: !document.getElementById("maximize").checked,
-        icon: document.getElementById("icon-select").value,
+        icon: path.join(folderSelect.value, iconSelect.value),
       });
     });
 
