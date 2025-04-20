@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const ws = require("windows-shortcuts"); // npm install windows-shortcuts
+const fs = require("fs");
 
 let profileName = app.commandLine.getSwitchValue("profile");
 let shouldNotMaximize = app.commandLine.getSwitchValue("no-maximize");
@@ -52,7 +53,10 @@ const createWindow = () => {
   });
 
   win.webContents.on("before-input-event", (event, input) => {
-    if ((input.control || input.meta) && (input.key === "+" || input.key === "-")) {
+    if (
+      (input.control || input.meta) &&
+      (input.key === "+" || input.key === "-")
+    ) {
       event.preventDefault();
     }
   });
@@ -69,6 +73,7 @@ const createCreationWindow = () => {
       contextIsolation: false,
     },
   });
+
   win.loadFile("screens/index.html");
 };
 
@@ -104,6 +109,48 @@ ipcMain.on("create-shortcut", (event, settings) => {
       }
     }
   );
+});
+
+ipcMain.on("clear-cache", (event) => {
+  const userData = app.getPath("userData");
+  const partitionsRoot = path.join(userData, "Partitions");
+
+  let deletedCount = 0;
+  const errors = [];
+
+  // 1) Make sure Partitions/ exists
+  if (!fs.existsSync(partitionsRoot) || !fs.statSync(partitionsRoot).isDirectory()) {
+    return event.reply("cache-cleared", {
+      success: false,
+      errors: ["Partitions folder not found at " + partitionsRoot],
+    });
+  }
+
+  // 2) List each profile folder under Partitions/
+  const profiles = fs
+    .readdirSync(partitionsRoot, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => path.join(partitionsRoot, d.name));
+
+  // 3) For each profile, delete its Cache/ directory if present
+  profiles.forEach((profileDir) => {
+    const cacheDir = path.join(profileDir, "Cache");
+    if (fs.existsSync(cacheDir) && fs.statSync(cacheDir).isDirectory()) {
+      try {
+        fs.rmSync(cacheDir, { recursive: true, force: true });
+        deletedCount++;
+      } catch (err) {
+        errors.push(`Failed to delete Cache for “${path.basename(profileDir)}”: ${err.message}`);
+      }
+    }
+  });
+
+  // 4) Report back
+  if (errors.length === 0) {
+    event.reply("cache-cleared", { success: true, deletedCount });
+  } else {
+    event.reply("cache-cleared", { success: false, deletedCount: 0, errors });
+  }
 });
 
 app.whenReady().then(() => {
