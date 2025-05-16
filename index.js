@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const ws = require("windows-shortcuts"); // npm install windows-shortcuts
 const fs = require("fs");
+const os = require("os");
 
 let profileName = app.commandLine.getSwitchValue("profile");
 let shouldNotMaximize = app.commandLine.getSwitchValue("no-maximize");
@@ -80,35 +81,86 @@ const createCreationWindow = () => {
 ipcMain.on("create-shortcut", (event, settings) => {
   const appPath = process.execPath;
   const desktop = app.getPath("desktop");
-  const shortcutPath = path.join(desktop, `${settings.profile}.lnk`);
-
-  const iconPath = path.join(__dirname, "assets", "icons", settings.icon);
+  const profile = settings.profile;
+  const platform = os.platform();
 
   const args = [
-    `--profile=${settings.profile}`,
+    `--profile=${profile}`,
     `--width=${settings.width}`,
     `--height=${settings.height}`,
   ];
   if (settings.noMaximize) args.push("--no-maximize");
 
-  ws.create(
-    shortcutPath,
-    {
-      target: appPath,
-      args: args.join(" "),
-      icon: iconPath,
-      desc: `Flyff Universe - ${settings.profile}`,
-    },
-    (err) => {
-      if (err) {
-        console.error("Failed to create shortcut:", err);
-        event.reply("shortcut-created", { success: false, error: err.message });
-      } else {
-        console.log("Shortcut created:", shortcutPath);
-        event.reply("shortcut-created", { success: true });
+  if (platform === "win32") {
+    const shortcutPath = path.join(desktop, `${profile}.lnk`);
+    const iconPath = path.join(__dirname, "assets", "icons", settings.icon);
+
+    ws.create(
+      shortcutPath,
+      {
+        target: appPath,
+        args: args.join(" "),
+        icon: iconPath,
+        desc: `Flyff Universe - ${profile}`,
+      },
+      (err) => {
+        if (err) {
+          event.reply("shortcut-created", { success: false, error: err.message });
+        } else {
+          event.reply("shortcut-created", { success: true });
+        }
       }
+    );
+  } else if (platform === "darwin") {
+    const bundleName = `${profile}.app`;
+    const appBundlePath = path.join(desktop, bundleName);
+    const contentsDir = path.join(appBundlePath, "Contents");
+    const macosDir = path.join(contentsDir, "MacOS");
+    const resourcesDir = path.join(contentsDir, "Resources");
+  
+    fs.mkdirSync(macosDir, { recursive: true });
+    fs.mkdirSync(resourcesDir, { recursive: true });
+  
+    const launcherPath = path.join(macosDir, "launcher");
+    const launcherScript = `#!/bin/bash
+  "${appPath}" ${args.map((a) => `"${a}"`).join(" ")} &
+  `;
+    fs.writeFileSync(launcherPath, launcherScript, { mode: 0o755 });
+  
+    // 🔽 Use .icns instead of .ico
+    const icnsFilename = settings.icon.replace(/\.ico$/i, ".icns");
+    const icnsSource = path.join(__dirname, "assets", "icons", icnsFilename);
+    const icnsTarget = path.join(resourcesDir, "app.icns");
+  
+    try {
+      fs.copyFileSync(icnsSource, icnsTarget);
+    } catch (copyErr) {
+      console.warn(`⚠️ Couldn't copy icon for ${profile}: ${copyErr.message}`);
     }
-  );
+  
+    // Info.plist
+    const plist = `<?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0">
+    <dict>
+      <key>CFBundleExecutable</key>
+      <string>launcher</string>
+      <key>CFBundleIdentifier</key>
+      <string>com.yourapp.${profile}</string>
+      <key>CFBundleName</key>
+      <string>${profile}</string>
+      <key>CFBundlePackageType</key>
+      <string>APPL</string>
+      <key>CFBundleIconFile</key>
+      <string>app.icns</string>
+    </dict>
+  </plist>
+  `;
+    fs.writeFileSync(path.join(contentsDir, "Info.plist"), plist);
+  
+    event.reply("shortcut-created", { success: true });
+  }
 });
 
 ipcMain.on("clear-cache", (event) => {

@@ -23,6 +23,13 @@ module.exports = {
         // Configuration options for squirrel maker
       },
     },
+    {
+      name: '@electron-forge/maker-zip',
+      platforms: ['darwin'],
+      config: {
+        // macOS zip config if needed
+      },
+    },
     // Add more makers as needed for other packaging formats
   ],
 };
